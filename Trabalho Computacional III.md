@@ -86,16 +86,16 @@ def power_method_coo(input_matrix, arbitrary_non_null_vector, tolerance, max_ite
     eigenvector = vector_normalization(eigenvector, greatest_element)
 
     for current_iteration in range(max_iterations):
-        matrix_eigenvector_product = input_matrix.dot(eigenvector)
-        eigenvalue = matrix_eigenvector_product[greatest_element_index]
-        greatest_element_index, greatest_element = infinite_norm(matrix_eigenvector_product)
+        next_iteration_eigenvector = input_matrix.dot(eigenvector)
+        eigenvalue = next_iteration_eigenvector[greatest_element_index]
+        greatest_element_index, greatest_element = infinite_norm(next_iteration_eigenvector)
 
         if abs(greatest_element) < 10 ** -18:
             print("The input matrix has the eigenvalue 0, select a new arbitrary vector and restart.")
             return 0, np.empty(len(input_matrix.todense()))
 
-        error = np.linalg.norm(eigenvector - np.dot(matrix_eigenvector_product, 1 / greatest_element), np.inf)
-        eigenvector = np.dot(matrix_eigenvector_product, 1 / greatest_element)  # Eigenvector
+        error = np.linalg.norm(eigenvector - np.dot(next_iteration_eigenvector, 1 / greatest_element), np.inf)
+        eigenvector = np.dot(next_iteration_eigenvector, 1 / greatest_element)  # Eigenvector
 
         if error < tolerance:
             return eigenvalue, eigenvector
@@ -165,16 +165,26 @@ Dimensão: 7102
 Tempo necessário para encontrar o raio espectral: 8.67s
 ```
 
-##### Gráficos - Tempo x Dimensão da matriz:  
+##### Gráficos - Tempo x Dimensão da matriz: 
 * Oito primeiras matrizes, em ordem crescente pela dimensão:  
     !["Eight matrices - Power Method"](plots/power-method-dimensions-8.png)  
     
 * Todas as matrizes:  
     !["All matrices - Power Method"](plots/power-method-dimensions-10.png)  
 
-> Discussão sobre a diferenca de tempo, sobre o processo, etc.
-
-
+* Acerca da variação sem padrão aparente nas oito primeiras matrizes, será utilizada a seguinte animação na explicação:  
+!["Power Iteration animation"](matrices/gifs/Animation_of_the_Power_Iteration_Algorithm.gif)  
+  
+    A aproximação inicial do autovetor utilizado na execução do método da potência para todas as matrizes foi simplesmente
+  um vetor com 1 em todas as entradas, o que satisfaz as necessidades do vetor não ser nulo e ter norma infinita igual a um.  
+    Dado esse detalhe de implementação, os resultados podem variar muito, como a animação acima explicita. Isto é,
+    o vetor (1, 1, ... , 1) com certeza é mais próximo do autovetor da matriz _sts4098_ do que do autovetor da 
+    matriz _bcsstk34_ e esse fato faz com que a convergência para uma matriz de *dimensão 4098* leve metade do tempo da
+    convergência para uma de *dimensão 588*.  
+    
+    > Matrizes: sts4098 vs bcsstk34  
+    Dimensões: 4098 vs 588  
+    Tempo para convergência: 0.267s vs 0.512s  
 
 > c. Utilização do método da potência inverso como otimizador do método da potência.
 
@@ -183,6 +193,7 @@ import numpy as np
 import infinite_norm
 import vector_normalization 
 
+from numpy.linalg import LinAlgError
 
 def inverse_power_method(input_matrix, eigenvector_approximation, tolerance, max_iterations):
     input_matrix_dimension = len(input_matrix)
@@ -199,17 +210,17 @@ def inverse_power_method(input_matrix, eigenvector_approximation, tolerance, max
         auxiliary_matrix = np.subtract(input_matrix, rayleigh_identity)
 
         try:
-            y = np.linalg.solve(auxiliary_matrix, eigenvector_approximation)
+            next_iteration_eigenvector = np.linalg.solve(auxiliary_matrix, eigenvector_approximation)
         except LinAlgError:
             print("y does not have unique solution, so {} is an eigenvalue".format(rayleigh_quotient))
             return rayleigh_quotient, np.empty(0)
 
-        eigenvalue = y[greatest_element_index]
-        greatest_element_index, greatest_element = infinite_norm(y)
+        eigenvalue = next_iteration_eigenvector[greatest_element_index]
+        greatest_element_index, greatest_element = infinite_norm(next_iteration_eigenvector)
 
-        y_quotient = np.dot(y, 1 / greatest_element)
-        error_index, error = infinite_norm(np.subtract(eigenvector_approximation, y_quotient))
-        eigenvector_approximation = np.dot(y, 1 / greatest_element)
+        next_iteration_eigenvector_normalized = np.dot(next_iteration_eigenvector, 1 / greatest_element)
+        error_index, error = infinite_norm(np.subtract(eigenvector_approximation, next_iteration_eigenvector_normalized))
+        eigenvector_approximation = np.dot(next_iteration_eigenvector, 1 / greatest_element)
 
         if error < tolerance:
             eigenvalue = 1 / eigenvalue + rayleigh_quotient
@@ -218,9 +229,10 @@ def inverse_power_method(input_matrix, eigenvector_approximation, tolerance, max
     raise Exception("Maximum number of iterations exceeded. The procedure was unsuccessful.")
 ```
 
-* Assim, o método da potência será alterado para delegar ao método da potência inverso o processo de encontrar o raio espectral.  
+* O método da potência será alterado para delegar ao método da potência inverso o processo de encontrar o raio espectral.  
 A partir do momento em que o erro calculado valer 10^-4, o método da potência inversa calcula em poucas iterações o autovalor e o autovetor correspondente utilizando como aproximação inicial o autovetor gerado pelo método da potência.  
-É importante notar que, embora o método da potência convirja mais rapidamente, ele realiza cálculos computacionalmente caros, como, por exemplo, a inversa de uma matriz.  
+É importante notar que, embora o método da potência convirja em um número menor de iterações, ele realiza cálculos computacionalmente caros, como, por exemplo, a inversa de uma matriz.  
+Seria como se o método da potência inversa assumisse o processo no meio da [animação](#grficos---tempo-x-dimenso-da-matriz) mostrada anteriormente.  
 
 * Método da potência otimizado:  
 ```python
@@ -308,8 +320,16 @@ Dimensão: 7102
 Tempo necessário para encontrar o raio espectral utilizando o método da potência inversa como otimizador: 7.56s
 ``` 
 
-* Comentar que talvez o algoritmo otimizado tenha mais utilidade em matrizes de maior dimensão  
-* Comentar demora maior em menores dimensões. 
+* Como fica claro pelos logs, o método da potência inversa como otimizador nem sempre garante melhoria no desempenho. 
+Devido ao fato de sua execução demandar muitas operações de ponto flutuante (flops), o custo-benefício de sua utilização 
+para matrizes pequenas é baixo, como fica claro no desempenho quase igual ao método da potência puro.  
+Entretanto, para matrizes de maior dimensão, como no caso da Muu (7102x7102), os complexos cálculos do método inverso vencem sobre
+um número muito maior de iterações do método puro.  
+>Matriz: Muu  
+>Dimensão: 7102x7102  
+>Tempo no método da potência: 8.67s  
+>Tempo no método da potência inversa: 7.56s  
+>Ganho de desempenho: 13%  
 
 ##### Gráficos - Tempo x Dimensão da matriz:  
 !["All matrices - Optimized Power Method"](plots/power-method-with-inverse-iteration-graph-by-dimension.png)  
@@ -386,8 +406,40 @@ Dimensão: 7102
 Não foi possível determinar os autovalores, o tempo para convergência superou nove horas de processamento.
 ```
 
-##### Gráficos - Tempo x Dimensão da matriz:  
+##### Gráfico - Tempo x Dimensão da matriz:  
 !["QR Algorithm - Eight smallest matrices"](plots/qr-algorithm.png)  
 
->e. Discussão dos resultados
- 
+* A convergência mais rápida de matrizes maiores em relação a matrizes menores se justifica na dependência da
+ velocidade de convergência com a diferença de tamanho entre autovalores consecutivos da matriz. Ou seja, a matriz 
+ _nasa2910_ converge mais rapidamente que a matriz _plat1919_ (mesmo tendo uma dimensão 1.5x maior) porque seus autovalores 
+ consecutivos são menores e resulta num processo mais rápido para encontrar seu espectro completo.
+
+* Como explicado [nessas notas de aula](http://people.inf.ethz.ch/arbenz/ewp/Lnotes/chapter4.pdf), o algoritmo QR não é
+recomendado para matrizes muito grandes, devido à necessidade de trabalhar com matrizes densas e o excesso de memória e 
+processamento que seus cálculos demandariam. Assim, o algoritmo provou-se imensamente demorado para grandes matrizes esparsas,
+visto que ultrapassou nove horas de processamento para as duas matrizes com dimensão maior que 5000 deste estudo.
+
+* Seria possível acelerar o algoritmo QR utilizando o método de Householder para transformar uma matriz cheia em uma
+matriz do formato Hessenberg, entretanto, isso foge ao escopo deste trabalho.
+
+* O algoritmo QR implementado utiliza como fator de parada uma diferença menor que um dado ε (precision). 
+A diferença é determinada pelo primeiro elemento de cada diagonal, este o maior autovalor, entre a última iteração e a iteração anterior.  
+Dessa forma, o invariante (um tanto informal) do loop _while_ contido no algoritmo é definido como:
+> "À medida que uma matriz quadrada A se aproxima de uma matriz triangular superior, triangular inferior ou diagonal, 
+os elementos da diagonal da matriz A sâo aproximações para os autovalores de A".  
+    1. Inicialização: toda matriz SPD A contém em sua diagonal principal elementos (a1, a2, ..., an) que, 
+    através de prova por contradição (e indução, no caso numérico), se aproximam dos autovalores de A conforme o 
+    determinante de A passa a depender somente da diagonal principal. Isto é, ao passo que A passar a apresentar as 
+    características contidas no invariante.  
+    2. Manutenção:  a cada iteração, os elementos abaixo da diagonal principal de A se aproximam de zero e os elementos em sua diagonal
+    se aproximam dos autovalores.  
+    3. Encerramento:  A é uma matriz triangular superior e contém seus autovalores em sua diagonal principal.
+
+>e. Discussão dos resultados  
+*  Finalmente, ao longo do relatório foram demonstradas estratégias para encontrar autovalores e autovetores, junto de 
+suas vantagens e limitações de implementações. Portanto, é possível fazer as seguintes observações:  
+    * O algoritmo QR puro é claramente não recomendado, aplicações utilizando a transformação de Householder seguidas de
+    tridiagonalização da matriz são essenciais para diminuir o tempo de execução e, dessa forma, dar viabilidade prática
+    ao algoritmo.  
+    * O algoritmo da potência otimizado com o algoritmo da potência inversa pode ser muito útil em grandes matrizes, podendo 
+    ainda ser otimizado com, por exemplo, o método de Aitken.

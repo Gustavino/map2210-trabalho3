@@ -19,17 +19,17 @@ def inverse_power_method(input_matrix, eigenvector_approximation, tolerance, max
         auxiliary_matrix = np.subtract(input_matrix, rayleigh_identity)
 
         try:
-            y = np.linalg.solve(auxiliary_matrix, eigenvector_approximation)
+            next_iteration_eigenvector = np.linalg.solve(auxiliary_matrix, eigenvector_approximation)
         except LinAlgError:
             print("y does not have unique solution, so {} is an eigenvalue".format(rayleigh_quotient))
             return rayleigh_quotient, np.empty(0)
 
-        eigenvalue = y[greatest_element_index]
-        greatest_element_index, greatest_element = infinite_norm(y)
+        eigenvalue = next_iteration_eigenvector[greatest_element_index]
+        greatest_element_index, greatest_element = infinite_norm(next_iteration_eigenvector)
 
-        y_quotient = np.dot(y, 1 / greatest_element)
-        error_index, error = infinite_norm(np.subtract(eigenvector_approximation, y_quotient))
-        eigenvector_approximation = np.dot(y, 1 / greatest_element)
+        next_iteration_eigenvector_normalized = np.dot(next_iteration_eigenvector, 1 / greatest_element)
+        error_index, error = infinite_norm(np.subtract(eigenvector_approximation, next_iteration_eigenvector_normalized))
+        eigenvector_approximation = np.dot(next_iteration_eigenvector, 1 / greatest_element)
 
         if error < tolerance:
             eigenvalue = 1 / eigenvalue + rayleigh_quotient

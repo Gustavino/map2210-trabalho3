@@ -24,16 +24,16 @@ def power_method_dense(input_matrix, arbitrary_non_null_vector, tolerance, max_i
     arbitrary_non_null_vector = vector_normalization(arbitrary_non_null_vector, greatest_element)
 
     for current_iteration in range(max_iterations):
-        y = np.dot(input_matrix, arbitrary_non_null_vector)
-        eigenvalue = y[greatest_element_index]
-        greatest_element_index, greatest_element = infinite_norm(y)
+        next_iteration_eigenvector = np.dot(input_matrix, arbitrary_non_null_vector)
+        eigenvalue = next_iteration_eigenvector[greatest_element_index]
+        greatest_element_index, greatest_element = infinite_norm(next_iteration_eigenvector)
 
         if abs(greatest_element) < 10 ** -18:
             print("The input matrix has the eigenvalue 0, select a new arbitrary vector and restart.")
             return 0, np.empty(len(input_matrix.todense()))
 
-        error = np.linalg.norm(arbitrary_non_null_vector - np.dot(y, 1 / greatest_element), np.inf)
-        arbitrary_non_null_vector = np.dot(y, 1 / greatest_element)  # Eigenvector
+        error = np.linalg.norm(arbitrary_non_null_vector - np.dot(next_iteration_eigenvector, 1 / greatest_element), np.inf)
+        arbitrary_non_null_vector = np.dot(next_iteration_eigenvector, 1 / greatest_element)  # Eigenvector
 
         if error < tolerance:
             print("The procedure was successful in {} iterations".format(current_iteration + 1))
@@ -49,16 +49,16 @@ def power_method_coo(input_matrix, arbitrary_non_null_vector, tolerance, max_ite
     eigenvector = vector_normalization(eigenvector, greatest_element)
 
     for current_iteration in range(max_iterations):
-        matrix_eigenvector_product = input_matrix.dot(eigenvector)
-        eigenvalue = matrix_eigenvector_product[greatest_element_index]
-        greatest_element_index, greatest_element = infinite_norm(matrix_eigenvector_product)
+        next_iteration_eigenvector = input_matrix.dot(eigenvector)
+        eigenvalue = next_iteration_eigenvector[greatest_element_index]
+        greatest_element_index, greatest_element = infinite_norm(next_iteration_eigenvector)
 
         if abs(greatest_element) < 10 ** -18:
             print("The input matrix has the eigenvalue 0, select a new arbitrary vector and restart.")
             return 0, np.empty(len(input_matrix.todense()))
 
-        error = np.linalg.norm(eigenvector - np.dot(matrix_eigenvector_product, 1 / greatest_element), np.inf)
-        eigenvector = np.dot(matrix_eigenvector_product, 1 / greatest_element)  # Eigenvector
+        error = np.linalg.norm(eigenvector - np.dot(next_iteration_eigenvector, 1 / greatest_element), np.inf)
+        eigenvector = np.dot(next_iteration_eigenvector, 1 / greatest_element)  # Eigenvector
 
         if error < tolerance:
             return eigenvalue, eigenvector
